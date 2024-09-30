@@ -1,7 +1,7 @@
 #include <iostream>
-#include <algorithm>
 #include <cstring>
 #include <ctime>
+#include <random>
 
 
 using namespace std;
@@ -31,11 +31,18 @@ typedef enum {
 int length,height;
 int lei_count;
 
-int total;
+int total;//总的雷数量
 
-int* lei=nullptr;
-int* status=nullptr;
+int* lei=nullptr;//动态分配的储存是否为雷的数组
+int* status=nullptr;//动态分配的储存当前格子状态的数组
 
+/**
+ * @brief 计算当前格子周围的雷的数量
+ * 
+ * @param x 水平坐标
+ * @param y 竖直坐标
+ * @return int 雷的数量
+ */
 int count_lei(int x,int y){
 	int tmp_leis=0;
 	for(int i=-1;i<=1;i++){
@@ -51,6 +58,13 @@ int count_lei(int x,int y){
 	return tmp_leis;
 }
 
+/**
+ * @brief 计算当前格子周围的旗子的数量
+ * 
+ * @param x 水平坐标
+ * @param y 竖直坐标
+ * @return int 旗子的数量
+ */
 int count_flag(int x,int y){
 	int tmp_flags=0;
 	for(int i=-1;i<=1;i++){
@@ -66,29 +80,35 @@ int count_flag(int x,int y){
 	return tmp_flags;
 }
 
+/**
+ * @brief 根据当前的地图属性值随机生成地雷的排布
+ * 
+ */
 void gen_map(){
 	if(lei!=nullptr){
 		delete[] lei;
 	}
-	lei=new int[total];
+	lei=new int[total]();
 
-	for(int i=0;i<total;i++){
-		if(i<lei_count){
-			lei[i]=1;
-		}
-		else{
-			lei[i]=0;
-		}
+	for(int i=0;i<lei_count;i++){
+		lei[i]=1;
 	}
-	random_shuffle(lei,lei+total);
+	
+	static random_device rd;
+	static default_random_engine e(rd());
+
+	shuffle(lei,lei+total,e);
 
 	if(status!=nullptr){
 		delete[] status;
         }
-	status=new int[total];
-	memset(status,0,sizeof(int)*total);
+	status=new int[total]();
 }
 
+/**
+ * @brief 打印出地图的数据
+ * 
+ */
 void show_map(){
 	printf("%-" CEIL_SPACE_STR "c",' ');
 	for(int i=0;i<length;i++){
@@ -141,10 +161,17 @@ void show_map(){
 
 }
 
-int* found=nullptr;
+int* found=nullptr;//提供给dfs用于记录深度优先搜索的临时数据
 
-
-int dfs(int x,int y){
+/**
+ * @brief 深度优先搜索无雷的格子并打开
+ * 
+ * @param x 水平坐标
+ * @param y 竖直坐标
+ * @return true 遇到不能搜索的地方
+ * @return false 直接搜到炸弹
+ */
+bool dfs(int x,int y){
 
 	if(x<0||x>=length||y<0||y>=height){
 		return true;
@@ -182,7 +209,14 @@ typedef enum{
 
 } DoubleClkRetValue;
 
-int double_clk(int x,int y){
+/**
+ * @brief 双击格子
+ * 
+ * @param x 水平坐标
+ * @param y 竖直坐标
+ * @return DoubleClkRetValue 返回双击后的状态
+ */
+DoubleClkRetValue double_clk(int x,int y){
 	if(status[x+y*length]!=OPENED){
 		return DBCLK_NOT_OPENED;
 	}
@@ -209,7 +243,12 @@ int double_clk(int x,int y){
 	return DBCLK_SUCC;
 }
 
-
+/**
+ * @brief 检查游戏是否结束
+ * 
+ * @return true 游戏成功结束了
+ * @return false 游戏没有结束
+ */
 bool check_end(){
 	int not_found_count=0;
 	int flag_count=0;
@@ -289,7 +328,7 @@ int main(){
 				status[x+y*length]=act+1;
 			}
 			else if(act==DOUBLE_CLK){
-				int dbclk_ret=double_clk(x,y);
+				DoubleClkRetValue dbclk_ret=double_clk(x,y);
 
 				if(dbclk_ret==DBCLK_FAILED){
 					is_failed=true;
@@ -302,10 +341,6 @@ int main(){
 			else{
 				status[x+y*length]=NOT_OPEN;
 			}
-
-			
-				
-
 		}
 	}
 
